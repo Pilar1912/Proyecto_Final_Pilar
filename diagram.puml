@@ -1,0 +1,342 @@
+@startuml Spacedementia_UML
+
+skinparam classBackgroundColor<<Entity>> #FFE4B5
+skinparam classBackgroundColor<<Controller>> #B0E0E6
+skinparam classBackgroundColor<<Manager>> #98FB98
+skinparam classBackgroundColor<<Visual>> #DDA0DD
+skinparam classBackgroundColor<<Abstract>> #F0F8FF
+skinparam backgroundColor #FFFFFF
+skinparam classFontStyle bold
+skinparam arrowFontSize 10
+
+class Config <<Manager>> {
+    {static} WIDTH: int = 1280
+    {static} HEIGHT: int = 720
+    {static} FPS: int = 60
+    {static} LEVEL_DURATION: int = 60 * 60
+    {static} BULLET_DAMAGE: int = 5
+    {static} BOSS_HP: int = 500
+    --
+    {static} WHITE: tuple = (255, 255, 255)
+    {static} RED: tuple = (255, 0, 0)
+    {static} BLUE: tuple = (0, 100, 255)
+    {static} YELLOW: tuple = (255, 255, 0)
+    {static} CYAN: tuple = (0, 255, 255)
+    {static} MAGENTA: tuple = (255, 0, 255)
+    {static} ORANGE: tuple = (255, 165, 0)
+    {static} GREEN: tuple = (0, 255, 0)
+}
+
+class SoundManager <<Manager>> {
+    - sfx_volume: float
+    - music_volume: float
+    - enabled: bool
+    - sounds: Dict[str, pygame.mixer.Sound]
+    --
+    - _tone(freq: int, duration: int, wave: str): Sound
+    - _sweep(f_start: int, f_end: int, duration: int): Sound
+    - _laser(): Sound
+    + play(name: str): void
+    + play_music(): void
+    + set_volume(volume: float): void
+}
+
+class Game <<Controller>> {
+    - screen: pygame.Surface
+    - clock: pygame.time.Clock
+    - sound_manager: SoundManager
+    --
+    - player: Player
+    - enemies: List[Enemy]
+    - bullets: List[Bullet]
+    - enemy_bullets: List[Bullet]
+    - powerups: List[PowerUp]
+    - explosions: List[Explosion]
+    - background: Background
+    - score_system: ScoreSystem
+    --
+    - level: int = 1
+    - max_enemies: int
+    - level_timer: int
+    - boss_phase: bool = False
+    - boss: CubeBoss | None
+    - paused: bool = False
+    - game_over: bool = False
+    --
+    + run_frame(clock): str | None
+    + update_game_state(): void
+    + spawn_enemy(): void
+    + spawn_powerup(x: int, y: int): void
+    + auto_shoot_weapons(): void
+    + check_collision(bullet: Bullet, entity): bool
+    + check_attack(enemy: Enemy, player: Player): bool
+    + draw_game_elements(): void
+    - _update_boss(): void
+    - _advance_level(): void
+}
+
+class Player <<Entity>> {
+    - x: float
+    - y: float
+    - size: int = 20
+    - speed: int = 7
+    - life: int = 3
+    - powerups: Dict[str, int]
+    - shield_active: bool = False
+    - shield_time: int = 0
+    --
+    + move(direction: str): void
+    + add_powerup(type: str): void
+    + remove_powerup(type: str): void
+    + has_powerup(type: str): bool
+    + get_powerups_list(): List[str]
+    + update_powerups(): void
+    + activate_shield(): void
+    + update_shield(): void
+    + draw(screen): void
+}
+
+class Enemy <<Entity>> {
+    - x: float
+    - y: float
+    - size: int = 15
+    - speed: int
+    - agil: bool = False
+    - direction_x: int = 1
+    - shoot_cooldown: int = 0
+    --
+    + move(): void
+    + shoot(): Bullet
+    - rotate_point(point: tuple, angle: float): tuple
+    + draw(screen): void
+}
+
+abstract class Boss <<Abstract>> {
+    - name: str
+    - size: int
+    - x: float
+    - y: float
+    - base_x: float
+    - hp: int
+    - max_hp: int
+    - speed_y: int
+    - direction_y: int = 1
+    - alive: bool = True
+    - level: int
+    --
+    - charging: bool = False
+    - charge_target_x: float = 0
+    - charge_cooldown: int = 0
+    - returning: bool = False
+    --
+    - shoot_cooldown: int = 0
+    - shoot_rate: int = 20
+    --
+    + move(): void
+    + shoot(): List[Bullet]
+    + take_damage(damage: int): void
+    + is_alive(): bool
+    # {abstract} _create_bullets(): List[Bullet]
+    # {abstract} draw(screen): void
+    + draw_health_bar(screen): void
+}
+
+class CubeBoss <<Entity>> {
+    - angle_x: float = 0
+    - angle_y: float = 0
+    - rot_speed: float = 1.5
+    - fov: int = 500
+    - z_distance: float = 800
+    --
+    - VERTICES: List[tuple]
+    - FACES: List[List[int]]
+    - FACE_NORMALS: List[tuple]
+    - FACE_COLORS: List[tuple]
+    --
+    - _rotate(point: tuple, ang_x: float, ang_y: float): tuple
+    - _project(point_3d: tuple): tuple
+    - _get_rotated_normals(): List[tuple]
+    - _get_face_centers_2d(): List[tuple]
+    # _create_bullets(): List[Bullet]
+    # draw(screen): void
+}
+
+class Bullet <<Entity>> {
+    - x: float
+    - y: float
+    - speed: int = 10
+    - width: int = 4
+    - height: int = 10
+    - direction: str
+    - frame: int = 0
+    --
+    + move(): void
+    + draw(screen): void
+    + is_out_of_bounds(): bool
+}
+
+class PowerUp <<Entity>> {
+    {static} WEAPON_LEFT: str = "WEAPON_LEFT"
+    {static} WEAPON_RIGHT: str = "WEAPON_RIGHT"
+    {static} WEAPON_UP: str = "WEAPON_UP"
+    {static} WEAPON_DOWN: str = "WEAPON_DOWN"
+    {static} WEAPON_DIAG_LEFT: str = "WEAPON_DIAG_LEFT"
+    {static} WEAPON_DIAG_RIGHT: str = "WEAPON_DIAG_RIGHT"
+    {static} LIFE: str = "LIFE"
+    {static} SHIELD: str = "SHIELD"
+    --
+    {static} COLORS: Dict[str, tuple]
+    {static} SYMBOLS: Dict[str, str]
+    --
+    - x: float
+    - y: float
+    - size: int = 15
+    - powerup_type: str
+    - speed_x: float = 3.0
+    - speed_y: float = 0.0
+    - age: int = 0
+    --
+    + move(): void
+    + draw(screen): void
+    + is_out_of_bounds(): bool
+}
+
+class Explosion <<Visual>> {
+    {static} COLORS: List[tuple]
+    --
+    - x: float
+    - y: float
+    - num_particles: int = 30
+    - particles: List[dict]
+    - lifetime: int = 30
+    - age: int = 0
+    --
+    - _create_particles(): void
+    + update(): void
+    + draw(screen): void
+    + is_alive(): bool
+}
+
+class FloatingText <<Visual>> {
+    - x: float
+    - y: float
+    - text: str
+    - color: tuple
+    - lifetime: int = 60
+    - age: int = 0
+    --
+    + update(): void
+    + draw(screen, font): void
+    + is_alive(): bool
+}
+
+class Background <<Visual>> {
+    - level: int = 1
+    - frame_count: int = 0
+    - stars: List[dict]
+    - nebula_particles: List[dict]
+    - black_hole: BlackHole | None
+    --
+    - _generate(level: int): void
+    - _make_star(): dict
+    --
+    + update(level: int): void
+    + draw(screen): void
+}
+
+class BlackHole <<Visual>> {
+    - x: float
+    - y: float
+    - radius: float
+    - angle: float = 0
+    - tilt: float = 0
+    --
+    - disk_particles: List[dict]
+    - lensing_particles: List[dict]
+    - falling: List[dict]
+    --
+    - _build_sphere(): pygame.Surface
+    + update(): void
+    + draw(screen): void
+}
+
+class ScoreSystem <<Manager>> {
+    - total_score: int = 0
+    - combo: int = 0
+    - max_combo: int = 0
+    - combo_timer: int = 0
+    - combo_timeout: int = 120
+    --
+    - base_scores: Dict[str, int]
+    - kills_by_type: Dict[str, int]
+    - floating_texts: List[FloatingText]
+    --
+    - high_score: int
+    - new_record: bool = False
+    --
+    + add_score(enemy_type: str, x: float, y: float): void
+    + get_combo_multiplier(): float
+    + update(): void
+    + draw(screen, font): void
+    - _load_high_score(): void
+    - _save_high_score(): void
+}
+
+class Menu <<Controller>> {
+    - screen: pygame.Surface
+    - sound_manager: SoundManager
+    - buttons: List[RetroButton]
+    - starfield: StarField
+    --
+    + run(): str
+    + draw(): void
+    + handle_events(): str
+}
+
+class StarField <<Visual>> {
+    - stars: List[dict]
+    - frame: int = 0
+    --
+    + update(): void
+    + draw(screen): void
+}
+
+class RetroButton <<Visual>> {
+    - x: float
+    - y: float
+    - width: int
+    - height: int
+    - text: str
+    - callback: callable
+    - hovered: bool = False
+    --
+    + draw(screen, font): void
+    + check_collision(mouse_pos): bool
+    + on_click(): void
+}
+
+Game "1" *-- "1" Player : manages (contiene)
+Game "1" *-- "0..*" Enemy : spawns (crea)
+Game "1" *-- "0..*" Bullet : manages (jugador+enemigos)
+Game "1" *-- "0..*" PowerUp : creates (genera)
+Game "1" *-- "0..*" Explosion : spawns (crea al impacto)
+Game "1" *-- "1" Background : has (fondo del juego)
+Game "1" *-- "1" ScoreSystem : uses (sistema puntos)
+Game "1" *-- "0..1" CubeBoss : spawns (fase boss)
+Game "1" --> "1" SoundManager : uses (audio)
+Game "1" --> "1" Config : uses (constantes)
+
+CubeBoss --|> Boss : inherits (extiende)
+
+Background "1" *-- "0..1" BlackHole : contains (contiene efecto)
+ScoreSystem "1" *-- "0..*" FloatingText : displays (muestra puntos)
+
+Player "1" o-- "0..*" PowerUp : activates (activa)
+Enemy "1" --> "0..*" Bullet : shoots (dispara)
+Boss "1" --> "0..*" Bullet : shoots (dispara)
+
+Menu "1" --> "1" SoundManager : uses
+Menu "1" *-- "1" StarField : displays
+Menu "1" *-- "0..*" RetroButton : contains
+
+@enduml
