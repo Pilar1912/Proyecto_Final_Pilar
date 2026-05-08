@@ -4,5 +4,8 @@
     "python.terminal.activateEnvInCurrentTerminal": true,
     "python.terminal.useExistingEnvironment": false,
     "python.venvPath": "${workspaceFolder}/.venv",
-    "python.venvFolders": [".venv"]
+    "python.venvFolders": [
+        ".venv"
+    ],
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

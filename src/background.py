@@ -1,4 +1,4 @@
-import random
+"""import random
 import math
 import sys
 import os
@@ -12,7 +12,7 @@ from config import HEIGHT, WIDTH
 
 
 class Background:
-    """Campo de estrellas parallax con colores sutiles y efecto de brillo."""
+    #Campo de estrellas parallax con colores sutiles y efecto de brillo.
 
     # Paletas de color por nivel (colores sutiles para estrellas especiales)
     LEVEL_ACCENTS = [
@@ -33,11 +33,12 @@ class Background:
         self.frame_count = 0
         self.stars = []
         self.nebula_particles = []
+        self.background_planets = []
         self.black_hole = None
         self._generate(level)
 
     def _generate(self, level):
-        """Genera el campo de estrellas según el nivel."""
+       #Genera el campo de estrellas según el nivel.
         self.level = level
         self.stars = []
         self.nebula_particles = []
@@ -78,17 +79,30 @@ class Background:
                 twinkle_chance=0.15,
             ))
 
-        # Partículas de nebulosa sutil (solo niveles 3+)
-        if level >= 3:
-            accent = random.choice(accents)
-            for _ in range(15 + (level - 3) * 8):
-                self.nebula_particles.append({
-                    "x": random.randint(0, WIDTH),
+        # Nebulosas más visibles según el nivel
+        # Nivel 1-2: nebulosa sutil; Nivel 3+: nebulosas prominentes
+        accent = random.choice(accents)
+        nebula_count = 20 + level * 10  # Aumenta con nivel
+        for _ in range(nebula_count):
+            self.nebula_particles.append({
+                "x": random.randint(0, WIDTH),
+                "y": random.randint(0, HEIGHT),
+                "speed": random.uniform(0.15, 0.5),
+                "size": random.randint(30, 80 + level * 10),  # Nebulosas más grandes en niveles altos
+                "color": accent,
+                "alpha": random.randint(15, 40),  # Más opacas
+            })
+        
+        # Planetas de fondo decorativos (crean profundidad)
+        self.background_planets = []
+        if level >= 2:
+            for _ in range(2 + level):
+                self.background_planets.append({
+                    "x": random.randint(int(WIDTH * 0.6), WIDTH),
                     "y": random.randint(0, HEIGHT),
-                    "speed": random.uniform(0.2, 0.6),
-                    "size": random.randint(15, 40),
-                    "color": accent,
-                    "alpha": random.randint(8, 20),
+                    "radius": random.randint(20, 50 + level * 5),
+                    "color": random.choice(accents),
+                    "alpha": random.randint(30, 80),
                 })
 
         # Agujero negro de fondo (posición estratégica según nivel)
@@ -161,7 +175,7 @@ class Background:
         self.frame_count += 1
 
     def _draw_star(self, screen, star):
-        """Dibuja una estrella individual con efecto twinkle."""
+       #Dibuja una estrella individual con efecto twinkle.
         x = int(star["x"])
         y = int(star["y"])
         color = star["base_color"]
@@ -215,3 +229,692 @@ class Background:
         for star in self.stars:
             if star["size"] > 1:
                 self._draw_star(screen, star)
+                """
+import random
+import math
+import sys
+import os
+import pygame
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from agujeronegro import BlackHole
+from config import HEIGHT, WIDTH
+
+
+class Background:
+    """
+    Fondo espacial estilo galaxia:
+    - nebulosas púrpura/azul
+    - estrellas con profundidad
+    - glow galáctico
+    - polvo cósmico
+    - agujero negro
+    """
+
+    def __init__(self, level=1):
+
+        self.level = level
+        self.frame_count = 0
+
+        self.stars = []
+        self.nebulae = []
+        self.planets = []
+        self.shooting_stars = []
+
+        self.black_hole = None
+
+        self._generate(level)
+        self._make_deep_space_bg()
+
+    # =========================================================
+    # FONDO GALÁCTICO
+    # =========================================================
+
+    def _make_deep_space_bg(self):
+
+        surf = pygame.Surface((WIDTH, HEIGHT))
+
+        # -----------------------------------------------------
+        # GRADIENTE ESPACIAL
+        # -----------------------------------------------------
+
+        for y in range(HEIGHT):
+
+            t = y / HEIGHT
+
+            r = int(5 + 20 * (1 - abs(t - 0.5) * 2))
+            g = int(5 + 10 * (1 - abs(t - 0.5) * 2))
+            b = int(20 + 50 * (1 - abs(t - 0.5) * 2))
+
+            pygame.draw.line(surf, (r, g, b), (0, y), (WIDTH, y))
+
+        # -----------------------------------------------------
+        # GLOW GALÁCTICO CENTRAL
+        # -----------------------------------------------------
+
+        glow_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+
+        center_x = WIDTH // 2
+        center_y = HEIGHT // 3
+
+        for radius in range(350, 0, -8):
+
+            alpha = max(0, int(80 * (1 - radius / 350)))
+
+            color = (
+                120,
+                80,
+                200,
+                alpha
+            )
+
+            pygame.draw.circle(
+                glow_surface,
+                color,
+                (center_x, center_y),
+                radius
+            )
+
+        surf.blit(glow_surface, (0, 0))
+
+        # -----------------------------------------------------
+        # POLVO CÓSMICO
+        # -----------------------------------------------------
+
+        for _ in range(5000):
+
+            x = random.randint(0, WIDTH - 1)
+            y = random.randint(0, HEIGHT - 1)
+
+            brightness = random.randint(5, 40)
+
+            choice = random.random()
+
+            # tonos variados tipo galaxia
+            if choice < 0.15:
+                color = (
+                    brightness // 2,
+                    brightness // 2,
+                    brightness
+                )
+
+            elif choice < 0.30:
+                color = (
+                    brightness,
+                    brightness // 2,
+                    brightness
+                )
+
+            else:
+                color = (
+                    brightness,
+                    brightness,
+                    brightness
+                )
+
+            surf.set_at((x, y), color)
+
+        # -----------------------------------------------------
+        # ESTRELLAS GRANDES CON GLOW
+        # -----------------------------------------------------
+
+        for _ in range(50):
+
+            x = random.randint(0, WIDTH)
+            y = random.randint(0, HEIGHT)
+
+            radius = random.randint(2, 5)
+
+            glow = pygame.Surface(
+                (radius * 8, radius * 8),
+                pygame.SRCALPHA
+            )
+
+            for r in range(radius * 4, 0, -1):
+
+                alpha = int(25 * (1 - r / (radius * 4)))
+
+                pygame.draw.circle(
+                    glow,
+                    (255, 255, 255, alpha),
+                    (radius * 4, radius * 4),
+                    r
+                )
+
+            surf.blit(
+                glow,
+                (x - radius * 4, y - radius * 4)
+            )
+
+        self.space_bg = surf
+
+    # =========================================================
+    # ESTRELLAS
+    # =========================================================
+
+    def _make_star(self, speed, size, brightness):
+
+        rand = random.random()
+
+        if rand < 0.03:
+            color = (180, 200, 255)
+
+        elif rand < 0.05:
+            color = (255, 240, 180)
+
+        elif rand < 0.08:
+            color = (220, 150, 255)
+
+        else:
+            color = (
+                brightness,
+                brightness,
+                brightness
+            )
+
+        return {
+
+            "x": random.randint(0, WIDTH),
+            "y": random.randint(0, HEIGHT),
+
+            "speed": speed,
+            "size": size,
+            "color": color,
+
+            "twinkle": random.random() < 0.08,
+
+            "twinkle_speed": random.uniform(0.02, 0.08),
+
+            "twinkle_offset": random.uniform(
+                0,
+                math.pi * 2
+            ),
+        }
+
+    # =========================================================
+    # NEBULOSAS
+    # =========================================================
+
+    def _add_nebula(self):
+
+        x = random.randint(-200, WIDTH)
+        y = random.randint(-100, HEIGHT)
+
+        width = random.randint(250, 500)
+        height = random.randint(120, 250)
+
+        colors = [
+
+            (120, 70, 200, 18),
+            (70, 120, 255, 18),
+            (255, 120, 180, 14),
+            (180, 80, 255, 15),
+        ]
+
+        return {
+
+            "x": x,
+            "y": y,
+
+            "width": width,
+            "height": height,
+
+            "color": random.choice(colors),
+
+            "angle": random.uniform(0, math.pi),
+
+            "speed": random.uniform(0.03, 0.08),
+        }
+
+    # =========================================================
+    # PLANETAS
+    # =========================================================
+
+    def _add_planet(self):
+
+        palette = [
+
+            (120, 100, 80),
+            (90, 110, 130),
+            (200, 180, 140),
+            (180, 140, 100),
+            (100, 120, 150),
+        ]
+
+        color = random.choice(palette)
+
+        radius = random.randint(25, 55)
+
+        return {
+
+            "x": random.randint(int(WIDTH * 0.7), WIDTH - 40),
+
+            "y": random.randint(40, HEIGHT - 40),
+
+            "radius": radius,
+
+            "color": color,
+
+            "phase_angle": random.uniform(
+                0,
+                math.pi / 3
+            ),
+        }
+
+    # =========================================================
+    # GENERACIÓN
+    # =========================================================
+
+    def _generate(self, level):
+
+        self.stars = []
+        self.nebulae = []
+        self.planets = []
+        self.shooting_stars = []
+
+        # estrellas lejanas
+        for _ in range(350):
+
+            self.stars.append(
+
+                self._make_star(
+                    speed=0.3,
+                    size=1,
+                    brightness=random.randint(80, 150)
+                )
+            )
+
+        # estrellas medias
+        for _ in range(180 + level * 5):
+
+            self.stars.append(
+
+                self._make_star(
+                    speed=random.uniform(0.8, 1.5),
+                    size=random.choice([1, 2]),
+                    brightness=random.randint(120, 200)
+                )
+            )
+
+        # estrellas cercanas
+        for _ in range(80 + level * 3):
+
+            self.stars.append(
+
+                self._make_star(
+                    speed=random.uniform(2.0, 3.5),
+                    size=random.choice([2, 3]),
+                    brightness=random.randint(180, 255)
+                )
+            )
+
+        # nebulosas
+        nebula_count = 10 + level
+
+        for _ in range(nebula_count):
+
+            self.nebulae.append(
+                self._add_nebula()
+            )
+
+        # pocos planetas
+        if level >= 4:
+
+            num_planets = 1
+
+            for _ in range(num_planets):
+
+                self.planets.append(
+                    self._add_planet()
+                )
+
+        # agujero negro
+        if level >= 3:
+
+            bh_radius = 30 + level * 3
+
+            bh_x = int(WIDTH * 0.8)
+            bh_y = int(HEIGHT * 0.3)
+
+            self.black_hole = BlackHole(
+                bh_x,
+                bh_y,
+                radius=bh_radius
+            )
+
+        else:
+            self.black_hole = None
+
+    # =========================================================
+    # UPDATE
+    # =========================================================
+
+    def update(self, level=None):
+
+        if level is not None and level != self.level:
+
+            self._generate(level)
+            self.level = level
+
+        # mover estrellas
+        for star in self.stars:
+
+            star["x"] -= star["speed"]
+
+            if star["x"] < -10:
+
+                star["x"] = WIDTH + random.randint(0, 30)
+                star["y"] = random.randint(0, HEIGHT)
+
+        # mover nebulosas
+        for neb in self.nebulae:
+
+            neb["x"] -= neb["speed"]
+
+            if neb["x"] + neb["width"] < 0:
+
+                neb["x"] = WIDTH + random.randint(0, 100)
+
+                neb["y"] = random.randint(
+                    0,
+                    HEIGHT
+                )
+
+        # agujero negro
+        if self.black_hole:
+
+            self.black_hole.update(1.0)
+
+        # estrellas fugaces
+        if random.random() < 0.002:
+
+            self.shooting_stars.append({
+
+                "x": random.randint(0, WIDTH),
+
+                "y": random.randint(
+                    0,
+                    HEIGHT // 2
+                ),
+
+                "vx": random.uniform(-10, -5),
+
+                "vy": random.uniform(1, 3),
+
+                "life": random.randint(20, 40)
+            })
+
+        for s in self.shooting_stars[:]:
+
+            s["x"] += s["vx"]
+            s["y"] += s["vy"]
+
+            s["life"] -= 1
+
+            if (
+                s["life"] <= 0
+                or s["x"] < 0
+                or s["y"] > HEIGHT
+            ):
+
+                self.shooting_stars.remove(s)
+
+        self.frame_count += 1
+
+    # =========================================================
+    # DIBUJAR ESTRELLA
+    # =========================================================
+
+    def _draw_star(self, screen, star):
+
+        x = int(star["x"])
+        y = int(star["y"])
+
+        color = star["color"]
+        size = star["size"]
+
+        if star["twinkle"]:
+
+            t = (
+                self.frame_count
+                * star["twinkle_speed"]
+                + star["twinkle_offset"]
+            )
+
+            glow = (math.sin(t) + 1) / 2
+
+            factor = 0.6 + glow * 0.4
+
+            color = tuple(
+
+                min(255, int(c * factor))
+                for c in star["color"]
+            )
+
+        if size == 1:
+
+            screen.set_at((x, y), color)
+
+        else:
+
+            pygame.draw.circle(
+                screen,
+                color,
+                (x, y),
+                size
+            )
+
+    # =========================================================
+    # DRAW
+    # =========================================================
+
+    def draw(self, screen):
+
+        # fondo
+        screen.blit(self.space_bg, (0, 0))
+
+        # -----------------------------------------------------
+        # NEBULOSAS
+        # -----------------------------------------------------
+
+        for neb in self.nebulae:
+
+            neb_surf = pygame.Surface(
+                (neb["width"], neb["height"]),
+                pygame.SRCALPHA
+            )
+
+            cx = neb["width"] // 2
+            cy = neb["height"] // 2
+
+            max_r = neb["width"] // 2
+
+            for r in range(max_r, 0, -6):
+
+                alpha = int(
+                    neb["color"][3]
+                    * (1 - r / max_r)
+                )
+
+                color = (
+
+                    neb["color"][0],
+                    neb["color"][1],
+                    neb["color"][2],
+                    alpha
+                )
+
+                pygame.draw.ellipse(
+
+                    neb_surf,
+
+                    color,
+
+                    (
+                        cx - r,
+                        cy - r // 3,
+                        r * 2,
+                        r
+                    )
+                )
+
+            rotated = pygame.transform.rotate(
+                neb_surf,
+                math.degrees(neb["angle"])
+            )
+
+            screen.blit(
+                rotated,
+                (neb["x"], neb["y"])
+            )
+
+        # -----------------------------------------------------
+        # ESTRELLAS
+        # -----------------------------------------------------
+
+        for star in self.stars:
+
+            self._draw_star(screen, star)
+
+        # -----------------------------------------------------
+        # PLANETAS
+        # -----------------------------------------------------
+
+        for p in self.planets:
+
+            pygame.draw.circle(
+
+                screen,
+
+                p["color"],
+
+                (
+                    int(p["x"]),
+                    int(p["y"])
+                ),
+
+                p["radius"]
+            )
+
+            shadow_surf = pygame.Surface(
+                (p["radius"] * 2, p["radius"] * 2),
+                pygame.SRCALPHA
+            )
+
+            shadow_center = (
+
+                p["radius"]
+                + int(
+                    p["radius"]
+                    * 0.3
+                    * math.cos(p["phase_angle"])
+                ),
+
+                p["radius"]
+            )
+
+            pygame.draw.circle(
+
+                shadow_surf,
+
+                (0, 0, 0, 140),
+
+                shadow_center,
+
+                p["radius"]
+            )
+
+            screen.blit(
+
+                shadow_surf,
+
+                (
+                    int(p["x"]) - p["radius"],
+                    int(p["y"]) - p["radius"]
+                )
+            )
+
+        # -----------------------------------------------------
+        # AGUJERO NEGRO
+        # -----------------------------------------------------
+
+        if self.black_hole:
+
+            for r in range(
+                self.black_hole.radius + 5,
+                self.black_hole.radius + 35,
+                5
+            ):
+
+                alpha = max(
+                    0,
+                    80 - (
+                        r
+                        - self.black_hole.radius
+                    ) * 3
+                )
+
+                ellipse_rect = pygame.Rect(
+
+                    self.black_hole.x - r,
+
+                    self.black_hole.y - int(r * 0.4),
+
+                    r * 2,
+
+                    int(r * 0.8)
+                )
+
+                pygame.draw.ellipse(
+
+                    screen,
+
+                    (255, 100, 40, alpha),
+
+                    ellipse_rect,
+
+                    1
+                )
+
+            self.black_hole.draw(screen)
+
+        # -----------------------------------------------------
+        # ESTRELLAS FUGACES
+        # -----------------------------------------------------
+
+        for s in self.shooting_stars:
+
+            start = (
+                int(s["x"]),
+                int(s["y"])
+            )
+
+            end = (
+                int(s["x"] - s["vx"] * 2),
+                int(s["y"] - s["vy"] * 2)
+            )
+
+            pygame.draw.line(
+
+                screen,
+
+                (255, 255, 200),
+
+                start,
+
+                end,
+
+                2
+            )
+
+            pygame.draw.circle(
+
+                screen,
+
+                (255, 240, 200),
+
+                start,
+
+                2
+            )

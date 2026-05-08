@@ -4,7 +4,7 @@ import pygame
 from background import Background
 from bullet import Bullet
 from config import BLACK, BULLET_DAMAGE, FPS, HEIGHT, LEVEL_DURATION, RED, WHITE, WIDTH
-from cubo import CubeBoss
+from cubo import SpaceRobotBoss
 from enemy import Enemy
 from explosion import Explosion
 from player import Player
@@ -255,11 +255,11 @@ class Game:
                     self.explosions.append(
                         Explosion(enemy.x, enemy.y, num_particles=16)
                     )
-                    if enemy.agil:
+                    if enemy.kind == 'yellow':
                         enemy_type = "agil"
                     else:
                         enemy_type = "normal"
- 
+
                     self.score_system.add_score(enemy_type, enemy.x, enemy.y)
                     enemies_to_remove.append(enemy)
                     self._play_sound("explosion")
@@ -433,7 +433,7 @@ class Game:
                 self._play_sound("hit")
  
     def _create_boss(self, level):
-        return CubeBoss(level)
+        return SpaceRobotBoss(level)
  
     def _advance_level(self):
         self.level += 1
