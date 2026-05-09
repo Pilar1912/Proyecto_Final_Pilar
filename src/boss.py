@@ -1,9 +1,10 @@
+import math
 import random
 
 import pygame
-
 from bullet import Bullet
 from config import BOSS_HP, HEIGHT, WHITE, WIDTH
+from projectile import Projectile
 
 
 class Boss:
@@ -29,6 +30,7 @@ class Boss:
         self.direction_y = 1  # 1 = abajo, -1 = arriba
         self.alive = True
         self.level = level
+        self._animation_frame = 0  # Contador de frames para animaciones
 
         # IA de carga (embestida hacia la izquierda)
         self.charging = False
@@ -42,6 +44,14 @@ class Boss:
         self.shoot_cooldown = 0
         self.shoot_rate = 20
 
+        # NUEVAS MECÁNICAS: Disparos automáticos hacia el jugador
+        self.auto_shoot_timer = 0  # Temporizador para disparos automáticos
+        self.auto_shoot_interval = random.randint(
+            30, 90
+        )  # 1-3 segundos (30-90 frames a 30 FPS)
+        self.projectile_timer = 0  # Temporizador para bombitas explosivas
+        self.projectile_interval = 150  # Cada 5 segundos (150 frames a 30 FPS)
+
     def take_damage(self, damage):
         self.hp -= damage
         if self.hp <= 0:
@@ -51,6 +61,12 @@ class Boss:
     def move(self):
         if not self.alive:
             return
+
+        self._animation_frame += 1
+
+        # Actualizar contadores de disparos automáticos
+        self.auto_shoot_timer += 1
+        self.projectile_timer += 1
 
         if not self.charging and not self.returning:
             self.y += self.speed_y * self.direction_y
@@ -76,17 +92,94 @@ class Boss:
                 self.returning = False
                 self.charge_cooldown = self.charge_cooldown_max
 
-    def shoot(self):
-        """Dispara balas segun el patron del boss."""
+    def shoot(self, player_x=None, player_y=None):
+        """
+        Dispara balas segun el patron del boss y disparos automáticos hacia el jugador.
+
+        Args:
+            player_x: Posición X del jugador (para disparos automáticos)
+            player_y: Posición Y del jugador (para disparos automáticos)
+
+        Returns:
+            Lista con balas normales y proyectiles especiales
+        """
         if not self.alive:
-            return []
+            return [], []
 
+        all_bullets = []
+        all_projectiles = []
+
+        # Disparos del patrón específico del jefe
         self.shoot_cooldown -= 1
-        if self.shoot_cooldown > 0:
-            return []
+        if self.shoot_cooldown <= 0:
+            self.shoot_cooldown = self.shoot_rate
+            all_bullets.extend(self._create_bullets())
 
-        self.shoot_cooldown = self.shoot_rate
-        return self._create_bullets()
+        # NUEVOS DISPAROS AUTOMÁTICOS HACIA EL JUGADOR
+        if player_x is not None and player_y is not None:
+            # Disparos automáticos cada 1-3 segundos
+            if self.auto_shoot_timer >= self.auto_shoot_interval:
+                self.auto_shoot_timer = 0
+                self.auto_shoot_interval = random.randint(
+                    30, 90
+                )  # Siguiente intervalo aleatorio
+                # Dispara 2-3 balas hacia el jugador
+                all_bullets.extend(
+                    self._shoot_at_player(
+                        player_x, player_y, num_bullets=random.randint(2, 3)
+                    )
+                )
+
+            # Bombitas explosivas cada 5 segundos
+            if self.projectile_timer >= self.projectile_interval:
+                self.projectile_timer = 0
+                all_projectiles.append(self._shoot_explosive_bomb(player_x, player_y))
+
+        return all_bullets, all_projectiles
+
+    def _shoot_at_player(self, player_x, player_y, num_bullets=2):
+        """Crea disparos normales dirigidos hacia el jugador."""
+        bullets = []
+
+        # Calcular ángulo hacia el jugador
+        dx = player_x - self.x
+        dy = player_y - self.y
+        distance = math.sqrt(dx**2 + dy**2)
+
+        if distance == 0:
+            return bullets
+
+        # Normalizar dirección
+        dir_x = dx / distance
+        dir_y = dy / distance
+
+        # Crear múltiples disparos con pequeños ángulos de separación
+        for i in range(num_bullets):
+            # Ángulo adicional para dispersión (arcade effect)
+            angle_offset = (i - (num_bullets - 1) / 2) * 0.3
+            angle = math.atan2(dy, dx) + angle_offset
+
+            # Convertir ángulo a dirección
+            new_dir_x = math.cos(angle)
+            new_dir_y = math.sin(angle)
+
+            # Crear bala personalizada con dirección
+            bullet = Bullet(
+                self.x - self.size // 2,
+                self.y + (i - (num_bullets - 1) / 2) * 15,
+                14,
+                "BOSS_CUSTOM",
+                custom_vx=new_dir_x * 14,
+                custom_vy=new_dir_y * 14,
+            )
+            bullets.append(bullet)
+
+        return bullets
+
+    def _shoot_explosive_bomb(self, player_x, player_y):
+        """Crea una bombita explosiva dirigida hacia el jugador."""
+        bomb = Projectile(self.x - self.size // 2, self.y, player_x, player_y, speed=6)
+        return bomb
 
     def _create_bullets(self):
         """Sobreescribir en subclases para definir patron de disparo."""
@@ -118,9 +211,7 @@ class Boss:
         bar_y = 10
 
         # Fondo de la barra (gris oscuro)
-        pygame.draw.rect(
-            screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height)
-        )
+        pygame.draw.rect(screen, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
 
         # Barra de vida (rojo -> amarillo -> verde segun HP)
         hp_ratio = self.hp / self.max_hp
@@ -129,19 +220,13 @@ class Boss:
             bar_color = (int(255 * (1 - hp_ratio) * 2), 255, 0)
         else:
             bar_color = (255, int(255 * hp_ratio * 2), 0)
-        pygame.draw.rect(
-            screen, bar_color, (bar_x, bar_y, fill_width, bar_height)
-        )
+        pygame.draw.rect(screen, bar_color, (bar_x, bar_y, fill_width, bar_height))
 
         # Borde de la barra
-        pygame.draw.rect(
-            screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 2
-        )
+        pygame.draw.rect(screen, WHITE, (bar_x, bar_y, bar_width, bar_height), 2)
 
         # Texto del jefe
         font = pygame.font.SysFont("monospace", 14, bold=True)
-        label = font.render(
-            f"{self.name}  {self.hp}/{self.max_hp}", 1, WHITE
-        )
+        label = font.render(f"{self.name}  {self.hp}/{self.max_hp}", 1, WHITE)
         label_rect = label.get_rect(center=(WIDTH // 2, bar_y + bar_height // 2))
         screen.blit(label, label_rect)

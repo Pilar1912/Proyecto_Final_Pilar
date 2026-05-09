@@ -1,4 +1,4 @@
-WIDTH, HEIGHT = 1920, 1080#1920, 1200
+WIDTH, HEIGHT = 1920, 1080  # 1920, 1200
 
 # Colores
 WHITE = (255, 255, 255)
@@ -13,6 +13,6 @@ ORANGE = (255, 140, 0)
 
 # Gameplay
 FPS = 30
-LEVEL_DURATION = 10 #2 * 60  # Duración del nivel en segundos (2 minutos)
+LEVEL_DURATION = 1 * 10  # Duración del nivel en segundos (2 minutos)
 BULLET_DAMAGE = 5
 BOSS_HP = BULLET_DAMAGE * 100  # 500 HP

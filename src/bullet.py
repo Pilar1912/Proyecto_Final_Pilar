@@ -1,22 +1,26 @@
 import pygame
-
 from config import BLUE, GREEN, YELLOW
 
 
 class Bullet:
-    def __init__(self, x, y, speed, direction):
+    def __init__(self, x, y, speed, direction, custom_vx=None, custom_vy=None):
         self.x = x
         self.y = y
         self.speed = speed
         self.width = 5
         self.height = 10
-        self.direction = (
-            direction  # "UP", "DOWN", "LEFT", "RIGHT", "DIAG_LEFT", "DIAG_RIGHT", "DIAG_DOWN_LEFT", "DIAG_DOWN_RIGHT"
-        )
+        self.direction = direction  # "UP", "DOWN", "LEFT", "RIGHT", "DIAG_LEFT", "DIAG_RIGHT", "DIAG_DOWN_LEFT", "DIAG_DOWN_RIGHT", "BOSS_CUSTOM"
         self.frame = 0  # Contador para animación retro
+        self.custom_vx = custom_vx  # Velocidad X personalizada para disparos del jefe
+        self.custom_vy = custom_vy  # Velocidad Y personalizada para disparos del jefe
 
     def move(self):
-        if self.direction == "UP":
+        if self.direction == "BOSS_CUSTOM":
+            # Movimiento personalizado con velocidades custom
+            if self.custom_vx is not None and self.custom_vy is not None:
+                self.x += self.custom_vx
+                self.y += self.custom_vy
+        elif self.direction == "UP":
             self.y -= self.speed
         elif self.direction == "DOWN":
             self.y += self.speed
@@ -79,12 +83,56 @@ class Bullet:
                         4,
                     ),
                 )
+        elif self.direction == "BOSS_CUSTOM":
+            # Disparos del jefe: más brillantes y futuristas (verde/cian con plasma)
+            bullet_width = 14
+            bullet_height = 8
+
+            # Color pulsante futurista
+            colors = [(0, 255, 150), (0, 200, 255)]  # Verde lima y Cian
+            color = colors[(self.frame // 3) % 2]
+
+            # Dibujar rectángulo del proyectil
+            pygame.draw.rect(
+                screen,
+                color,
+                (
+                    int(self.x - bullet_width // 2),
+                    int(self.y - bullet_height // 2),
+                    bullet_width,
+                    bullet_height,
+                ),
+            )
+
+            # Aura de energía
+            pygame.draw.rect(
+                screen,
+                (0, 255, 200),
+                (
+                    int(self.x - bullet_width // 2 - 1),
+                    int(self.y - bullet_height // 2 - 1),
+                    bullet_width + 2,
+                    bullet_height + 2,
+                ),
+                1,
+            )
+
+            # Núcleo brillante
+            if (self.frame // 4) % 2 == 0:
+                pygame.draw.circle(
+                    screen, (255, 255, 255), (int(self.x), int(self.y)), 2
+                )
         else:
             color = YELLOW if self.direction == "DOWN" else GREEN
             if self.direction == "UP":
                 color = (0, 255, 255)  # Cian
             elif self.direction == "LEFT":
                 color = BLUE
-            elif self.direction in ("DIAG_LEFT", "DIAG_RIGHT", "DIAG_DOWN_LEFT", "DIAG_DOWN_RIGHT"):
+            elif self.direction in (
+                "DIAG_LEFT",
+                "DIAG_RIGHT",
+                "DIAG_DOWN_LEFT",
+                "DIAG_DOWN_RIGHT",
+            ):
                 color = (0, 255, 100)  # Verde claro
             pygame.draw.rect(screen, color, (self.x, self.y, self.width, self.height))

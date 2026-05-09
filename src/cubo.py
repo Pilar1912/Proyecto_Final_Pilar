@@ -1,5 +1,4 @@
 import math
-import os
 
 import pygame
 
@@ -7,43 +6,16 @@ from boss import Boss
 from bullet import Bullet
 
 
-# Sprite del robot cargado globalmente
-_SPRITE_ROBOT = None
-
-
-def _load_robot_sprite():
-    """Carga el sprite PNG del robot. Se ejecuta una vez."""
-    global _SPRITE_ROBOT
-    if _SPRITE_ROBOT is not None:
-        return
-    
-    try:
-        assets_path = os.path.join(os.path.dirname(__file__), '..', 'assets')
-        _SPRITE_ROBOT = pygame.image.load(os.path.join(assets_path, 'boss_space_robot.png')).convert_alpha()
-    except Exception as e:
-        print(f"Advertencia: No se pudo cargar sprite del robot: {e}")
-        _SPRITE_ROBOT = None
-
-
-METAL_FACE = (70, 90, 115)
-METAL_FACE_ALT = (90, 110, 135)
-METAL_FACE_DARK = (50, 70, 95)
-METAL_EDGE = (190, 210, 235)
-ACCENT_BLUE = (120, 235, 255)
-ACCENT_CYAN = (80, 200, 235)
-CORE_GLOW = (150, 240, 255)
-
-
-class SpaceRobotBoss(Boss):
-    """Jefe robot espacial: cuboide 3D rotante con paneles y núcleo energético."""
+class CubeBoss(Boss):
+    """Primer jefe final: cubo 3D rotante que dispara desde sus caras visibles."""
 
     FACE_COLORS = [
-        METAL_FACE_DARK,
-        METAL_FACE_ALT,
-        METAL_FACE,
-        METAL_FACE_ALT,
-        METAL_FACE,
-        METAL_FACE_DARK,
+        (255, 0, 0),      # Rojo - inferior
+        (0, 255, 0),      # Verde - derecha
+        (0, 0, 255),      # Azul - superior
+        (255, 255, 0),    # Amarillo - izquierda
+        (255, 0, 255),    # Magenta - frente
+        (0, 255, 255),    # Cian - atras
     ]
 
     # 8 vertices del cubo centrado en el origen (lado = 2)
@@ -79,15 +51,12 @@ class SpaceRobotBoss(Boss):
     ]
 
     def __init__(self, level):
-        # Tamaño aumenta con el nivel: 80 en nivel 1, 90 en nivel 2, 100 en nivel 3, etc.
-        boss_size = 80 + (level - 1) * 10
-        super().__init__(level, name="SPACE ROBOT", size=boss_size)
+        super().__init__(level, name="CUBO", size=80)
         self.angle_x = 0
         self.angle_y = 0
         self.rot_speed = 0.02
         self.fov = 256
         self.z_distance = 4
-        _load_robot_sprite()
 
     def _rotate(self, point, ang_x, ang_y):
         """Rota un punto 3D alrededor de los ejes X e Y."""
@@ -165,34 +134,21 @@ class SpaceRobotBoss(Boss):
         return bullets
 
     def draw(self, screen):
-        """Dibuja el sprite PNG del robot con rotación visual."""
         if not self.alive:
             return
-        
-        if _SPRITE_ROBOT:
-            # Escalar el sprite al tamaño del boss
-            scaled_sprite = pygame.transform.scale(_SPRITE_ROBOT, (self.size, self.size))
-            
-            # Aplicar rotación visual del sprite para darle dinamismo
-            angle_degrees = math.degrees(self.angle_y) % 360
-            rotated_sprite = pygame.transform.rotate(scaled_sprite, -angle_degrees)
-            
-            rect = rotated_sprite.get_rect(center=(int(self.x), int(self.y)))
-            screen.blit(rotated_sprite, rect)
-        else:
-            # Fallback: dibujar cubo 3D procedural si no hay sprite
-            rotated = [self._rotate(v, self.angle_x, self.angle_y) for v in self.VERTICES]
-            projected = [self._project(v) for v in rotated]
 
-            # Ordenar caras por profundidad (atras hacia adelante)
-            face_depths = []
-            for idx, face in enumerate(self.FACES):
-                z_avg = sum(rotated[i][2] for i in face) / 4
-                face_depths.append((z_avg, idx, face))
-            face_depths.sort(key=lambda x: x[0], reverse=True)
+        rotated = [self._rotate(v, self.angle_x, self.angle_y) for v in self.VERTICES]
+        projected = [self._project(v) for v in rotated]
 
-            for _, idx, face in face_depths:
-                points = [projected[i] for i in face]
-                color = self.FACE_COLORS[idx]
-                pygame.draw.polygon(screen, color, points, 0)
-                pygame.draw.polygon(screen, METAL_EDGE, points, 2)
+        # Ordenar caras por profundidad (atras hacia adelante)
+        face_depths = []
+        for idx, face in enumerate(self.FACES):
+            z_avg = sum(rotated[i][2] for i in face) / 4
+            face_depths.append((z_avg, idx, face))
+        face_depths.sort(key=lambda x: x[0], reverse=True)
+
+        for _, idx, face in face_depths:
+            points = [projected[i] for i in face]
+            color = self.FACE_COLORS[idx]
+            pygame.draw.polygon(screen, color, points, 0)
+            pygame.draw.polygon(screen, (255, 255, 255), points, 2)
