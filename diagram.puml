@@ -1,0 +1,264 @@
+' Diagrama UML completo de SpaceDementia
+@startuml Spacedementia_UML
+skinparam classBackgroundColor<<Entity>> #FFE4B5
+skinparam classBackgroundColor<<Controller>> #B0E0E6
+skinparam classBackgroundColor<<Manager>> #98FB98
+skinparam classBackgroundColor<<Visual>> #DDA0DD
+skinparam classBackgroundColor<<Abstract>> #F0F8FF
+skinparam backgroundColor #FFFFFF
+skinparam classFontStyle bold
+skinparam arrowFontSize 10
+' Clases principales
+
+' Clases principales
+class Config <<Manager>> {
+	{static} WIDTH: int
+	{static} HEIGHT: int
+	{static} FPS: int
+	{static} LEVEL_DURATION: int
+	{static} COLORS: dict
+}
+class SoundManager <<Manager>> {
+	- sfx_volume: float
+	- music_volume: float
+	- enabled: bool
+	- sounds: dict
+	+ play(name: str): void
+	+ play_music(): void
+	+ set_volume(volume: float): void
+}
+class Game <<Controller>> {
+	- player: Player
+	- enemies: Enemy[]
+	- boss: Boss
+	- bullets: Bullet[]
+	- powerups: PowerUp[]
+	- explosions: Explosion[]
+	- background: Background
+	- score_system: ScoreSystem
+	- sound_manager: SoundManager
+	+ run(): void
+	+ update_game_state(): void
+	+ spawn_enemy(): void
+	+ spawn_powerup(): void
+}
+class Player <<Entity>> {
+	- x: float
+	- y: float
+	- size: int
+	- speed: int
+	- life: int
+	- powerups: dict
+	- shield_active: bool
+	- shield_time: int
+	+ move(direction: str): void
+	+ add_powerup(type: str): void
+	+ remove_powerup(type: str): void
+	+ activate_shield(): void
+	+ update_shield(): void
+}
+class Enemy <<Entity>> {
+	- x: float
+	- y: float
+	- size: int
+	- speed: int
+	- agil: bool
+	- direction_x: int
+	- shoot_cooldown: int
+	+ move(): void
+	+ shoot(): Bullet
+}
+abstract class Boss <<Abstract>> {
+	- name: str
+	- size: int
+	- x: float
+	- y: float
+	- base_x: float
+	- hp: int
+	- max_hp: int
+	- speed_y: int
+	- direction_y: int
+	- alive: bool
+	- level: int
+	- charging: bool
+	- charge_target_x: float
+	- charge_cooldown: int
+	- returning: bool
+	- shoot_cooldown: int
+	- shoot_rate: int
+	+ move(): void
+	+ shoot(): Bullet[]
+	+ take_damage(damage: int): void
+	+ is_alive(): bool
+	+ draw_health_bar(): void
+}
+class RobotBoss <<Entity>>
+class AlienBoss <<Entity>>
+class GoblinBoss <<Entity>>
+class DragonBoss <<Entity>>
+class KrakenBoss <<Entity>>
+class PhoenixBoss <<Entity>>
+class CubeBoss <<Entity>>
+class Bullet <<Entity>> {
+	- x: float
+	- y: float
+	- speed: int
+	- direction: str
+	- frame: int
+	+ move(): void
+	+ is_out_of_bounds(): bool
+}
+class PowerUp <<Entity>> {
+	{static} WEAPON_LEFT: str
+	{static} WEAPON_RIGHT: str
+	{static} WEAPON_UP: str
+	{static} WEAPON_DOWN: str
+	{static} WEAPON_DIAG_LEFT: str
+	{static} WEAPON_DIAG_RIGHT: str
+	{static} LIFE: str
+	{static} SHIELD: str
+	- x: float
+	- y: float
+	- size: int
+	- powerup_type: str
+	- speed_x: float
+	- speed_y: float
+	- age: int
+	+ move(): void
+	+ is_out_of_bounds(): bool
+}
+class Explosion <<Visual>> {
+	- x: float
+	- y: float
+	- num_particles: int
+	- particles: dict[]
+	- lifetime: int
+	- age: int
+	+ update(): void
+	+ is_alive(): bool
+}
+class Particle <<Visual>> {
+	- x: float
+	- y: float
+	- vx: float
+	- vy: float
+	- life: int
+}
+class Background <<Visual>> {
+	- level: int
+	- frame_count: int
+	- stars: dict[]
+	- nebula_particles: dict[]
+	- black_hole: BlackHole
+	+ update(level: int): void
+}
+class BlackHole <<Visual>> {
+	- x: float
+	- y: float
+	- radius: float
+	- angle: float
+	- tilt: float
+	- disk_particles: dict[]
+	- lensing_particles: dict[]
+	- falling: dict[]
+	+ update(): void
+}
+class ScoreSystem <<Manager>> {
+	- total_score: int
+	- combo: int
+	- max_combo: int
+	- combo_timer: int
+	- combo_timeout: int
+	- base_scores: dict
+	- kills_by_type: dict
+	- floating_texts: FloatingText[]
+	- high_score: int
+	- new_record: bool
+	+ add_score(enemy_type: str, x: float, y: float): void
+	+ get_combo_multiplier(): float
+	+ update(): void
+}
+class FloatingText <<Visual>> {
+	- x: float
+	- y: float
+	- text: str
+	- color: tuple
+	- lifetime: int
+	- age: int
+	+ update(): void
+	+ is_alive(): bool
+}
+class Menu <<Controller>> {
+	- screen: any
+	- sound_manager: SoundManager
+	- buttons: RetroButton[]
+	- starfield: StarField
+	+ run(): str
+	+ draw(): void
+	+ handle_events(): str
+}
+class StarField <<Visual>> {
+	- stars: dict[]
+	- frame: int
+	+ update(): void
+}
+class RetroButton <<Visual>> {
+	- x: float
+	- y: float
+	- width: int
+	- height: int
+	- text: str
+	- callback: callable
+	- hovered: bool
+	+ draw(): void
+	+ check_collision(mouse_pos): bool
+	+ on_click(): void
+}
+
+' Relaciones principales
+Game "1" *-- "1" Player : contiene
+Game "1" *-- "0..*" Enemy : contiene
+Game "1" *-- "0..*" Bullet : contiene
+Game "1" *-- "0..*" PowerUp : contiene
+Game "1" *-- "0..*" Explosion : contiene
+Game "1" *-- "1" Background : fondo
+Game "1" *-- "1" ScoreSystem : puntaje
+Game "1" *-- "0..1" Boss : boss actual
+Game "1" --> "1" SoundManager : audio
+Game "1" --> "1" Config : constantes
+
+
+' Relaciones principales y composición/herencia
+Game "1" *-- "1" Player : contiene
+Game "1" *-- "0..*" Enemy : contiene
+Game "1" *-- "0..*" Bullet : contiene
+Game "1" *-- "0..*" PowerUp : contiene
+Game "1" *-- "0..*" Explosion : contiene
+Game "1" *-- "1" Background : fondo
+Game "1" *-- "1" ScoreSystem : puntaje
+Game "1" *-- "0..1" Boss : boss actual
+Game "1" --> "1" SoundManager : audio
+Game "1" --> "1" Config : constantes
+
+Boss <|-- RobotBoss
+Boss <|-- AlienBoss
+Boss <|-- GoblinBoss
+Boss <|-- DragonBoss
+Boss <|-- KrakenBoss
+Boss <|-- PhoenixBoss
+Boss <|-- CubeBoss
+
+Background "1" *-- "0..1" BlackHole : efecto
+Background "1" *-- "*" Particle : partículas
+ScoreSystem "1" *-- "0..*" FloatingText : textos
+Player "1" o-- "0..*" PowerUp : power-ups
+Enemy "1" --> "0..*" Bullet : dispara
+Boss "1" --> "0..*" Bullet : dispara
+Explosion "1" *-- "*" Particle : partículas
+Menu "1" --> "1" SoundManager : audio
+Menu "1" *-- "1" StarField : fondo
+Menu "1" *-- "0..*" RetroButton : botones
+
+@enduml
+
+@enduml
