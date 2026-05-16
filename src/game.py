@@ -17,10 +17,18 @@ from spaceship_enemy import SpaceShipEnemy
 
 
 class Game:
-    def __init__(self, screen, sound_manager=None, start_level=1):
+    def __init__(self, screen, sound_manager=None, start_level=1, num_players=1):
         self.screen = screen
         self.sound = sound_manager
-        self.player = Player(40, HEIGHT // 2, 20, 10, 3)
+        self.num_players = num_players if num_players in (1, 2) else 1
+        # Soporte para 2 jugadores
+        if self.num_players == 2:
+            self.players = [
+                Player(40, HEIGHT // 2, 20, 10, 3),  # Jugador 1
+                Player(40, HEIGHT // 2 + 60, 20, 10, 3),  # Jugador 2 (desfasado)
+            ]
+        else:
+            self.players = [Player(40, HEIGHT // 2, 20, 10, 3)]
         self.enemies = []
         self.bullets = []
         self.enemy_bullets = []
@@ -73,37 +81,34 @@ class Game:
 
         if not self.paused:
             keys = pygame.key.get_pressed()
-            if (
-                keys[pygame.K_LEFT]
-                and self.player.x > self.player.speed
-                and self.player.life > 0
-            ):
-                self.player.move("LEFT")
-            if (
-                keys[pygame.K_RIGHT]
-                and self.player.x < WIDTH - self.player.speed
-                and self.player.life > 0
-            ):
-                self.player.move("RIGHT")
-            if (
-                keys[pygame.K_UP]
-                and self.player.y > self.player.speed
-                and self.player.life > 0
-            ):
-                self.player.move("UP")
-            if (
-                keys[pygame.K_DOWN]
-                and self.player.y < HEIGHT - self.player.speed
-                and self.player.life > 0
-            ):
-                self.player.move("DOWN")
-            if (
-                keys[pygame.K_SPACE]
-                and self.player.life > 0
-                and not self.phoenix_timeout
-            ):
-                self.bullets.append(Bullet(self.player.x, self.player.y, 20, "RIGHT"))
+            # Jugador 1 (flechas y espacio)
+            p1 = self.players[0]
+            if keys[pygame.K_LEFT] and p1.x > p1.speed and p1.life > 0:
+                p1.move("LEFT")
+            if keys[pygame.K_RIGHT] and p1.x < WIDTH - p1.speed and p1.life > 0:
+                p1.move("RIGHT")
+            if keys[pygame.K_UP] and p1.y > p1.speed and p1.life > 0:
+                p1.move("UP")
+            if keys[pygame.K_DOWN] and p1.y < HEIGHT - p1.speed and p1.life > 0:
+                p1.move("DOWN")
+            if keys[pygame.K_SPACE] and p1.life > 0 and not self.phoenix_timeout:
+                self.bullets.append(Bullet(p1.x, p1.y, 20, "RIGHT"))
                 self._play_sound("shoot")
+
+            # Jugador 2 (si existe): WASD y F para disparar
+            if self.num_players == 2 and len(self.players) > 1:
+                p2 = self.players[1]
+                if keys[pygame.K_a] and p2.x > p2.speed and p2.life > 0:
+                    p2.move("LEFT")
+                if keys[pygame.K_d] and p2.x < WIDTH - p2.speed and p2.life > 0:
+                    p2.move("RIGHT")
+                if keys[pygame.K_w] and p2.y > p2.speed and p2.life > 0:
+                    p2.move("UP")
+                if keys[pygame.K_s] and p2.y < HEIGHT - p2.speed and p2.life > 0:
+                    p2.move("DOWN")
+                if keys[pygame.K_f] and p2.life > 0 and not self.phoenix_timeout:
+                    self.bullets.append(Bullet(p2.x, p2.y, 20, "RIGHT"))
+                    self._play_sound("shoot")
 
             self.update_game_state()
 
@@ -155,74 +160,74 @@ class Game:
 
     def auto_shoot_weapons(self):
         """Dispara automáticamente según los power-ups activos"""
-        if PowerUp.WEAPON_LEFT in self.player.powerups:
-            count = self.player.powerups[PowerUp.WEAPON_LEFT]["count"]
+        if PowerUp.WEAPON_LEFT in self.players.powerups:
+            count = self.players.powerups[PowerUp.WEAPON_LEFT]["count"]
             for i in range(count):
                 offset = (i - (count - 1) / 2) * 8
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y + offset, 20, "LEFT")
+                    Bullet(self.players.x, self.players.y + offset, 20, "LEFT")
                 )
 
-        if PowerUp.WEAPON_RIGHT in self.player.powerups:
-            count = self.player.powerups[PowerUp.WEAPON_RIGHT]["count"]
+        if PowerUp.WEAPON_RIGHT in self.players.powerups:
+            count = self.players.powerups[PowerUp.WEAPON_RIGHT]["count"]
 
             if count == 0:
-                self.bullets.append(Bullet(self.player.x, self.player.y, 20, "RIGHT"))
+                self.bullets.append(Bullet(self.players.x, self.players.y, 20, "RIGHT"))
             elif count == 1:
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y - 8, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y - 8, 20, "RIGHT")
                 )
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y + 8, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y + 8, 20, "RIGHT")
                 )
             elif count == 2:
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y - 12, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y - 12, 20, "RIGHT")
                 )
-                self.bullets.append(Bullet(self.player.x, self.player.y, 20, "RIGHT"))
+                self.bullets.append(Bullet(self.players.x, self.players.y, 20, "RIGHT"))
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y + 12, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y + 12, 20, "RIGHT")
                 )
             else:
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y - 16, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y - 16, 20, "RIGHT")
                 )
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y - 4, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y - 4, 20, "RIGHT")
                 )
                 self.bullets.append(
-                    Bullet(self.player.x, self.player.y + 8, 20, "RIGHT")
+                    Bullet(self.players.x, self.players.y + 8, 20, "RIGHT")
                 )
 
                 if count >= 3:
                     self.bullets.append(
-                        Bullet(self.player.x + 20, self.player.y, 20, "RIGHT")
+                        Bullet(self.players.x + 20, self.players.y, 20, "RIGHT")
                     )
                 if count >= 4:
                     self.bullets.append(
-                        Bullet(self.player.x + 30, self.player.y, 20, "RIGHT")
+                        Bullet(self.players.x + 30, self.players.y, 20, "RIGHT")
                     )
                 if count >= 5:
                     self.bullets.append(
-                        Bullet(self.player.x + 40, self.player.y, 20, "RIGHT")
+                        Bullet(self.players.x + 40, self.players.y, 20, "RIGHT")
                     )
 
-        if PowerUp.WEAPON_DIAG_LEFT in self.player.powerups:
-            self.bullets.append(Bullet(self.player.x, self.player.y, 15, "DIAG_LEFT"))
-        if PowerUp.WEAPON_DIAG_RIGHT in self.player.powerups:
-            self.bullets.append(Bullet(self.player.x, self.player.y, 15, "DIAG_RIGHT"))
-        if PowerUp.WEAPON_DIAG_DOWN_LEFT in self.player.powerups:
+        if PowerUp.WEAPON_DIAG_LEFT in self.players.powerups:
+            self.bullets.append(Bullet(self.players.x, self.players.y, 15, "DIAG_LEFT"))
+        if PowerUp.WEAPON_DIAG_RIGHT in self.players.powerups:
+            self.bullets.append(Bullet(self.players.x, self.players.y, 15, "DIAG_RIGHT"))
+        if PowerUp.WEAPON_DIAG_DOWN_LEFT in self.players.powerups:
             self.bullets.append(
-                Bullet(self.player.x, self.player.y, 15, "DIAG_DOWN_LEFT")
+                Bullet(self.players.x, self.players.y, 15, "DIAG_DOWN_LEFT")
             )
-        if PowerUp.WEAPON_DIAG_DOWN_RIGHT in self.player.powerups:
+        if PowerUp.WEAPON_DIAG_DOWN_RIGHT in self.players.powerups:
             self.bullets.append(
-                Bullet(self.player.x, self.player.y, 15, "DIAG_DOWN_RIGHT")
+                Bullet(self.players.x, self.players.y, 15, "DIAG_DOWN_RIGHT")
             )
-        if PowerUp.WEAPON_UP in self.player.powerups:
-            self.bullets.append(Bullet(self.player.x, self.player.y, 20, "UP"))
-        if PowerUp.WEAPON_DOWN in self.player.powerups:
-            self.bullets.append(Bullet(self.player.x, self.player.y, 20, "DOWN"))
+        if PowerUp.WEAPON_UP in self.players.powerups:
+            self.bullets.append(Bullet(self.players.x, self.players.y, 20, "UP"))
+        if PowerUp.WEAPON_DOWN in self.players.powerups:
+            self.bullets.append(Bullet(self.players.x, self.players.y, 20, "DOWN"))
 
     def update_game_state(self):
         # Mover balas del jugador
@@ -231,22 +236,25 @@ class Game:
             if bullet.y < 0 or bullet.y > HEIGHT or bullet.x < 0 or bullet.x > WIDTH:
                 self.bullets.remove(bullet)
 
-        # Disparo automático con power-ups
-        if self.player.life > 0 and self.player.powerups:
-            self.auto_shoot_timer += 1
-            if self.auto_shoot_timer >= 10:
-                self.auto_shoot_timer = 0
-                self.auto_shoot_weapons()
+        # Disparo automático con power-ups para cada jugador
+        for idx, player in enumerate(self.players):
+            if player.life > 0 and player.powerups:
+                self.auto_shoot_timer += 1
+                if self.auto_shoot_timer >= 10:
+                    self.auto_shoot_timer = 0
+                    self.auto_shoot_weapons_for(player)
 
+        # Spawneo de enemigos
+        any_alive = any(p.life > 0 for p in self.players)
         if (
-            self.player.life > 0
+            any_alive
             and not self.boss_phase
             and len(self.enemies) < self.max_enemies
         ):
             self.spawn_enemy()
 
         # Subditos del boss
-        if self.boss_phase and self.boss and self.boss.alive and self.player.life > 0:
+        if self.boss_phase and self.boss and self.boss.alive and any_alive:
             self.boss_minion_timer += 1
             if self.boss_minion_timer >= 90 and len(self.enemies) < 3:
                 self.boss_minion_timer = 0
@@ -284,28 +292,29 @@ class Game:
             if bullet_hit:
                 continue
 
-            # Verificar ataque al jugador
-            if self.check_attack(enemy, self.player):
-                enemies_to_remove.append(enemy)
-                # Si el escudo está activo, protege completamente sin desactivarse
-                if self.player.shield_active:
-                    # Escudo absorbe el daño, no se desactiva
-                    pass
-                elif self.player.powerups:
-                    loseable_powerups = [
-                        p
-                        for p in self.player.powerups.keys()
-                        if p != PowerUp.WEAPON_RIGHT
-                    ]
-                    if loseable_powerups:
-                        powerup_to_lose = random.choice(loseable_powerups)
-                        self.player.remove_powerup(powerup_to_lose)
+            # Verificar ataque a cada jugador
+            for player in self.players:
+                if self.check_attack(enemy, player):
+                    enemies_to_remove.append(enemy)
+                    # Si el escudo está activo, protege completamente sin desactivarse
+                    if player.shield_active:
+                        pass
+                    elif player.powerups:
+                        loseable_powerups = [
+                            p
+                            for p in player.powerups.keys()
+                            if p != PowerUp.WEAPON_RIGHT
+                        ]
+                        if loseable_powerups:
+                            powerup_to_lose = random.choice(loseable_powerups)
+                            player.remove_powerup(powerup_to_lose)
+                        else:
+                            player.life = max(player.life - 1, 0)
+                        self._play_sound("hit")
                     else:
-                        self.player.life = max(self.player.life - 1, 0)
-                    self._play_sound("hit")
-                else:
-                    self.player.life = max(self.player.life - 1, 0)
-                    self._play_sound("hit")
+                        player.life = max(player.life - 1, 0)
+                        self._play_sound("hit")
+                    break
 
         # Eliminar todos los enemigos marcados
         for enemy in enemies_to_remove:
@@ -313,7 +322,7 @@ class Game:
                 self.enemies.remove(enemy)
 
         # Disparos de enemigos
-        if self.player.life > 0:
+        if any_alive:
             for enemy in self.enemies:
                 if random.randint(0, 100) < 5:
                     self.enemy_bullets.append(enemy.shoot())
@@ -336,73 +345,67 @@ class Game:
                         self.score_system.total_score += 2
                     break
 
-        # Colisiones balas enemigas con jugador
+        # Colisiones balas enemigas con jugadores
         for bullet in self.enemy_bullets[:]:
-            if self.check_collision(bullet, self.player):
-                self.enemy_bullets.remove(bullet)
-                # Si el escudo está activo, protege completamente sin desactivarse
-                if self.player.shield_active:
-                    # Escudo absorbe el daño, no se desactiva
-                    pass
-                else:
-                    self.player.life = max(self.player.life - 1, 0)
-                    self._play_sound("hit")
+            for player in self.players:
+                if self.check_collision(bullet, player):
+                    self.enemy_bullets.remove(bullet)
+                    if player.shield_active:
+                        pass
+                    else:
+                        player.life = max(player.life - 1, 0)
+                        self._play_sound("hit")
 
         # MANEJO DE PROJECTILES ESPECIALES (BOMBITAS EXPLOSIVAS DEL JEFE)
         for projectile in self.projectiles[:]:
             projectile.move()
-
-            # Verificar si está fuera de los límites
             if projectile.is_out_of_bounds():
                 self.projectiles.remove(projectile)
                 continue
-
-            # Verificar colisión con el jugador (área de explosión)
             explosion_rect = projectile.get_explosion_rect()
-            player_rect = pygame.Rect(
-                self.player.x - self.player.size,
-                self.player.y - self.player.size,
-                self.player.size * 2,
-                self.player.size * 2,
-            )
-
-            if explosion_rect.colliderect(player_rect):
-                # Crear explosión visual grande
-                ox = projectile.x
-                oy = projectile.y
-                for _ in range(3):
-                    self.explosions.append(
-                        Explosion(
-                            ox + random.randint(-30, 30),
-                            oy + random.randint(-30, 30),
-                            num_particles=32,
+            for player in self.players:
+                player_rect = pygame.Rect(
+                    player.x - player.size,
+                    player.y - player.size,
+                    player.size * 2,
+                    player.size * 2,
+                )
+                if explosion_rect.colliderect(player_rect):
+                    ox = projectile.x
+                    oy = projectile.y
+                    for _ in range(3):
+                        self.explosions.append(
+                            Explosion(
+                                ox + random.randint(-30, 30),
+                                oy + random.randint(-30, 30),
+                                num_particles=32,
+                            )
                         )
-                    )
-
-                # Daño más grande al jugador (daño de bombita)
-                if self.player.shield_active:
-                    # El escudo protege completamente
-                    pass
-                else:
-                    self.player.life = max(self.player.life - 2, 0)  # Daño x2
-                    self._play_sound("hit")
-
-                self.projectiles.remove(projectile)
+                    if player.shield_active:
+                        pass
+                    else:
+                        player.life = max(player.life - 2, 0)
+                        self._play_sound("hit")
+                    self.projectiles.remove(projectile)
+                    break
 
         # Mover y colisionar power-ups
         for powerup in self.powerups[:]:
             powerup.move()
             if powerup.x < 0 or powerup.x > WIDTH:
                 self.powerups.remove(powerup)
-            elif self.check_collision(powerup, self.player):
-                if powerup.powerup_type == PowerUp.LIFE:
-                    self.player.life += 1
-                elif powerup.powerup_type == PowerUp.SHIELD:
-                    self.player.activate_shield()
-                else:
-                    self.player.add_powerup(powerup.powerup_type)
-                self.powerups.remove(powerup)
-                self._play_sound("powerup")
+            else:
+                for player in self.players:
+                    if self.check_collision(powerup, player):
+                        if powerup.powerup_type == PowerUp.LIFE:
+                            player.life += 1
+                        elif powerup.powerup_type == PowerUp.SHIELD:
+                            player.activate_shield()
+                        else:
+                            player.add_powerup(powerup.powerup_type)
+                        self.powerups.remove(powerup)
+                        self._play_sound("powerup")
+                        break
 
         # Actualizar explosiones
         for explosion in self.explosions[:]:
@@ -410,11 +413,10 @@ class Game:
             if explosion.is_dead():
                 self.explosions.remove(explosion)
 
-        # Actualizar escudo del jugador
-        self.player.update_shield()
-
-        # Actualizar duracion de power-ups
-        self.player.update_powerups()
+        # Actualizar escudo y powerups de cada jugador
+        for player in self.players:
+            player.update_shield()
+            player.update_powerups()
 
         # Timer de nivel y fase de boss
         if not self.boss_phase:
@@ -427,11 +429,8 @@ class Game:
                 self._play_sound("boss_appear")
         else:
             self._update_boss()
-
-            # MANEJAR TIMEOUT DEL PHOENIX (NIVEL 6)
             if self.phoenix_timeout:
                 self.timeout_display_timer += 1
-                # Esperar 3 segundos después de mostrar el mensaje, luego reiniciar el nivel
                 if self.timeout_display_timer >= FPS * 3:
                     self.level_timer = LEVEL_DURATION * FPS
                     self.boss_phase = False
@@ -445,8 +444,8 @@ class Game:
         self.score_system.update()
         self.background.update(self.level)
 
-        # Detectar game over
-        if self.player.life <= 0 and not self.game_over:
+        # Detectar game over (todos los jugadores sin vidas)
+        if all(p.life <= 0 for p in self.players) and not self.game_over:
             self.game_over = True
             self.game_over_timer = 0
             self._play_sound("game_over")
@@ -457,35 +456,76 @@ class Game:
                 self.enemies.remove(enemy)
 
             # Resto del código sigue igual...
-            if self.player.life > 0:
+            if any_alive:
                 for enemy in self.enemies:
                     if random.randint(0, 100) < 5:
                         self.enemy_bullets.append(enemy.shoot())
                         self._play_sound("enemy_shoot")
 
+    def auto_shoot_weapons_for(self, player):
+        # Dispara automáticamente según los power-ups activos para un jugador específico
+        if PowerUp.WEAPON_LEFT in player.powerups:
+            count = player.powerups[PowerUp.WEAPON_LEFT]["count"]
+            for i in range(count):
+                offset = (i - (count - 1) / 2) * 8
+                self.bullets.append(Bullet(player.x, player.y + offset, 20, "LEFT"))
+        if PowerUp.WEAPON_RIGHT in player.powerups:
+            count = player.powerups[PowerUp.WEAPON_RIGHT]["count"]
+            if count == 0:
+                self.bullets.append(Bullet(player.x, player.y, 20, "RIGHT"))
+            elif count == 1:
+                self.bullets.append(Bullet(player.x, player.y - 8, 20, "RIGHT"))
+                self.bullets.append(Bullet(player.x, player.y + 8, 20, "RIGHT"))
+            elif count == 2:
+                self.bullets.append(Bullet(player.x, player.y - 12, 20, "RIGHT"))
+                self.bullets.append(Bullet(player.x, player.y, 20, "RIGHT"))
+                self.bullets.append(Bullet(player.x, player.y + 12, 20, "RIGHT"))
+            else:
+                self.bullets.append(Bullet(player.x, player.y - 16, 20, "RIGHT"))
+                self.bullets.append(Bullet(player.x, player.y - 4, 20, "RIGHT"))
+                self.bullets.append(Bullet(player.x, player.y + 8, 20, "RIGHT"))
+                if count >= 3:
+                    self.bullets.append(Bullet(player.x + 20, player.y, 20, "RIGHT"))
+                if count >= 4:
+                    self.bullets.append(Bullet(player.x + 30, player.y, 20, "RIGHT"))
+                if count >= 5:
+                    self.bullets.append(Bullet(player.x + 40, player.y, 20, "RIGHT"))
+        if PowerUp.WEAPON_DIAG_LEFT in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 15, "DIAG_LEFT"))
+        if PowerUp.WEAPON_DIAG_RIGHT in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 15, "DIAG_RIGHT"))
+        if PowerUp.WEAPON_DIAG_DOWN_LEFT in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 15, "DIAG_DOWN_LEFT"))
+        if PowerUp.WEAPON_DIAG_DOWN_RIGHT in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 15, "DIAG_DOWN_RIGHT"))
+        if PowerUp.WEAPON_UP in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 20, "UP"))
+        if PowerUp.WEAPON_DOWN in player.powerups:
+            self.bullets.append(Bullet(player.x, player.y, 20, "DOWN"))
+
     def _update_boss(self):
-        """Actualiza la lógica del boss: movimiento, disparos, colisiones, victoria."""
         if not self.boss or not self.boss.alive:
             return
-
         self.boss.move()
 
-        # VERIFICAR TIMEOUT DEL PHOENIX (NIVEL 6)
+    # Timeout de Phoenix
         if isinstance(self.boss, PhoenixBoss):
             if self.boss.has_time_out() and not self.phoenix_timeout:
                 self.phoenix_timeout = True
                 self.timeout_display_timer = 0
-                self._play_sound(
-                    "boss_defeat"
-                )  # Usar sonido de derrota para el timeout
+                self._play_sound("boss_defeat")
 
-        # Disparos: pasar coordenadas del jugador para disparos automáticos
-        new_bullets, new_projectiles = self.boss.shoot(self.player.x, self.player.y)
+    # Disparos del boss
+        ref_player = next((p for p in self.players if p.life > 0), self.players[0])
+        new_bullets, new_projectiles = self.boss.shoot(ref_player.x, ref_player.y)
         self.enemy_bullets.extend(new_bullets)
         self.projectiles.extend(new_projectiles)
 
+    # Obtener el rectángulo del boss (definido una sola vez)
+        boss_rect = self.boss.get_hit_rect()
+
+    # Colisión de balas del jugador con el boss
         for bullet in self.bullets[:]:
-            boss_rect = self.boss.get_hit_rect()
             bullet_rect = pygame.Rect(bullet.x, bullet.y, bullet.width, bullet.height)
             if boss_rect.colliderect(bullet_rect):
                 self.bullets.remove(bullet)
@@ -497,19 +537,24 @@ class Game:
                         self.explosions.append(Explosion(ox, oy, num_particles=24))
                     self._play_sound("boss_defeat")
                     self._advance_level()
-                    break
+                    break  # Salir del bucle porque el boss ya murió
 
+    # Colisión del boss con cada jugador (solo si el boss sigue vivo)
         if self.boss and self.boss.alive:
-            boss_rect = self.boss.get_hit_rect()
-            player_rect = pygame.Rect(
-                self.player.x - self.player.size,
-                self.player.y - self.player.size,
-                self.player.size * 2,
-                self.player.size * 2,
+            for player in self.players:
+                player_rect = pygame.Rect(
+                    player.x - player.size,
+                    player.y - player.size,
+                    player.size * 2,
+                    player.size * 2,
             )
-            if boss_rect.colliderect(player_rect):
-                self.player.life = max(self.player.life - 1, 0)
-                self._play_sound("hit")
+                if boss_rect.colliderect(player_rect):
+                    if player.shield_active:
+                        pass  # escudo protege
+                    else:
+                        player.life = max(player.life - 1, 0)
+                        self._play_sound("hit")
+                break  # solo daña a un jugador por frame
 
     def _create_boss(self, level):
         """Crea el jefe correspondiente al nivel."""
@@ -540,9 +585,12 @@ class Game:
     def _advance_level(self):
         self.level += 1
         self.max_enemies = 5 + (3 * self.level)
-        self.player.size += 2
+        #self.players.size += 2
+        for player in self.players:
+            player.size += 2          # Aumentar tamaño
+            player.life += 1          # Aumentar vida
         # self.score = 0
-        self.player.life += 1
+        #self.players.life += 1
         self.boss_phase = False
         self.boss = None
         self.level_timer = LEVEL_DURATION * FPS
@@ -552,14 +600,17 @@ class Game:
 
     def draw_game_elements(self):
         self.background.draw(self.screen)
-        self.player.draw(self.screen)
+        # Dibujar ambos jugadores
+        for idx, player in enumerate(self.players):
+            player.draw(self.screen)
         for bullet in self.bullets:
             bullet.draw(self.screen)
+        # Enemigos: pasar la posición del jugador 1 como referencia (o el primero vivo)
+        ref_player = next((p for p in self.players if p.life > 0), self.players[0])
         for enemy in self.enemies:
-            enemy.draw(self.screen, self.player.x, self.player.y)
+            enemy.draw(self.screen, ref_player.x, ref_player.y)
         for bullet in self.enemy_bullets:
             bullet.draw(self.screen)
-        # Dibujar projectiles especiales (bombitas explosivas)
         for projectile in self.projectiles:
             projectile.draw(self.screen)
         for powerup in self.powerups:
@@ -571,15 +622,17 @@ class Game:
             self.boss.draw(self.screen)
             self.boss.draw_health_bar(self.screen)
 
-        # self.draw_text(f"Score: {self.score}", (5, 5), 16)
-        font = pygame.font.SysFont("monospace", 20, bold=True)  # Fuente para el score
+        font = pygame.font.SysFont("monospace", 20, bold=True)
         self.score_system.draw(self.screen, font)
-        # self.draw_text(f"Level: {self.level}", (5, 25), 16)
-        # self.draw_text(f"Lifes: {self.player.life}", (5, 45), 16)
-        self.draw_text(f"Level: {self.level}", (5, 65), 16)  # Se ajusta la posición Y
-        self.draw_text(
-            f"Lifes: {self.player.life}", (5, 85), 16
-        )  # Se ajusta la posición Y
+        self.draw_text(f"Level: {self.level}", (5, 65), 16)
+
+        # Mostrar vidas y powerups de cada jugador
+        for idx, player in enumerate(self.players):
+            y_offset = 85 + idx * 30
+            self.draw_text(f"P{idx+1} Lifes: {player.life}", (5, y_offset), 16)
+            if player.powerups:
+                self.draw_powerups_visual(player, y_offset + 20)
+                #self.draw_powerups_visual(self.players, y_offset)
 
         if not self.boss_phase:
             seconds_left = self.level_timer // FPS
@@ -591,51 +644,63 @@ class Game:
             self.screen.blit(timer_text, (WIDTH - 100, 5))
         else:
             font = pygame.font.SysFont("monospace", 20, bold=True)
-
-            # MOSTRAR TEMPORIZADOR DEL PHOENIX (NIVEL 6)
             if isinstance(self.boss, PhoenixBoss) and not self.phoenix_timeout:
-                # Mostrar temporizador de 20 segundos
                 time_left = self.boss.get_remaining_time()
                 time_color = (
-                    RED
-                    if time_left <= 5
-                    else (255, 200, 0)
-                    if time_left <= 10
-                    else WHITE
+                    RED if time_left <= 5 else (255, 200, 0) if time_left <= 10 else WHITE
                 )
                 time_text = font.render(f"TIME: {time_left}s", 1, time_color)
                 self.screen.blit(time_text, (WIDTH - 200, 5))
-
-            # Mostrar mensaje de BOSS FIGHT!
             boss_text = font.render("BOSS FIGHT!", 1, RED)
             self.screen.blit(boss_text, (WIDTH - 160, 45))
 
-        # MOSTRAR MENSAJE DE TIMEOUT DEL PHOENIX
         if self.phoenix_timeout:
             font_large = pygame.font.SysFont("monospace", 60, bold=True)
             font_small = pygame.font.SysFont("monospace", 40, bold=True)
-
             timeout_text = font_large.render("TIME OUT!", 1, RED)
             timeout_rect = timeout_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60))
             self.screen.blit(timeout_text, timeout_rect)
-
             retry_text = font_small.render("LEVEL RESTART", 1, (255, 200, 0))
             retry_rect = retry_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
             self.screen.blit(retry_text, retry_rect)
 
-        if self.player.powerups:
-            self.draw_powerups_visual()
-
         if self.paused:
             self.draw_text("PAUSED", (WIDTH // 2 - 100, HEIGHT // 2 - 24), 48)
 
-        if self.player.life <= 0:
+        # GAME OVER si todos los jugadores han perdido
+        if all(p.life <= 0 for p in self.players):
             self.draw_text("GAME OVER", (WIDTH // 2 - 150, HEIGHT // 2 - 24), 48)
-            # Texto de retorno al menú
             font_small = pygame.font.SysFont("monospace", 20)
             back_text = font_small.render("Returning to menu...", True, (150, 150, 150))
             back_rect = back_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 30))
             self.screen.blit(back_text, back_rect)
+
+    #def draw_powerups_visual(self, players, y_pos=65):
+    #def draw_powerups_visual(self, players, y_offset):
+    def draw_powerups_visual(self, player, y_offset):
+    #Dibuja los power-ups de un jugador en la posición y_offset.
+        x_pos = 150
+        spacing = 35
+        y_pos = y_offset
+        for powerup_type, data in player.powerups.items():
+            count = data["count"]
+            time_left = data["time"]
+            color = PowerUp.COLORS.get(powerup_type, WHITE)
+            symbol = PowerUp.SYMBOLS.get(powerup_type, "?")
+        # Dibujar círculo, símbolo, etc.
+            pygame.draw.circle(self.screen, color, (x_pos + 8, y_pos + 8), 10, 2)
+            font_symbol = pygame.font.SysFont("monospace", 14, bold=True)
+            symbol_text = font_symbol.render(symbol, 1, color)
+            symbol_rect = symbol_text.get_rect(center=(x_pos + 8, y_pos + 8))
+            self.screen.blit(symbol_text, symbol_rect)
+            font_count = pygame.font.SysFont("monospace", 12)
+            count_text = font_count.render(str(count), 1, color)
+            self.screen.blit(count_text, (x_pos + 12, y_pos + 2))
+            seconds_left = (time_left + 29) // 30
+            font_time = pygame.font.SysFont("monospace", 10)
+            time_text = font_time.render(f"{seconds_left}s", 1, (200, 200, 200))
+            self.screen.blit(time_text, (x_pos - 3, y_pos + 16))
+            x_pos += spacing
 
     def check_collision(self, obj1, obj2):
         if hasattr(obj1, "size"):
@@ -687,33 +752,4 @@ class Game:
         label = font.render(text, 1, WHITE)
         self.screen.blit(label, position)
 
-    def draw_powerups_visual(self):
-        """Dibuja los power-ups con insignias visuales e iconos"""
-        x_pos = 5
-        y_pos = 65
-        spacing = 35
-
-        for powerup_type, data in self.player.powerups.items():
-            count = data["count"]
-            time_left = data["time"]
-            color = PowerUp.COLORS.get(powerup_type, WHITE)
-            symbol = PowerUp.SYMBOLS.get(powerup_type, "?")
-
-            pygame.draw.circle(self.screen, color, (x_pos + 8, y_pos + 8), 10, 2)
-
-            font_symbol = pygame.font.SysFont("monospace", 14, bold=True)
-            symbol_text = font_symbol.render(symbol, 1, color)
-            symbol_rect = symbol_text.get_rect(center=(x_pos + 8, y_pos + 8))
-            self.screen.blit(symbol_text, symbol_rect)
-
-            font_count = pygame.font.SysFont("monospace", 12)
-            count_text = font_count.render(str(count), 1, color)
-            self.screen.blit(count_text, (x_pos + 12, y_pos + 2))
-
-            # Mostrar tiempo restante en segundos
-            seconds_left = (time_left + 29) // 30  # Redondear hacia arriba
-            font_time = pygame.font.SysFont("monospace", 10)
-            time_text = font_time.render(f"{seconds_left}s", 1, (200, 200, 200))
-            self.screen.blit(time_text, (x_pos - 3, y_pos + 16))
-
-            x_pos += spacing
+    

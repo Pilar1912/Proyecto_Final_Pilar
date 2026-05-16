@@ -151,15 +151,19 @@ class SliderWidget:
 
 
 class Menu:
-    """Menú principal del juego con submenús."""
-
     # Estados del menú
     STATE_MAIN = "main"
     STATE_LEVELS = "levels"
     STATE_SOUND = "sound"
     STATE_SETTINGS = "settings"
 
-    def __init__(self, screen, sound_manager):
+    def __init__(self,screen, sound_manager):
+        # Estado de selección de jugadores
+        self.num_players = 1  # Por defecto 1 jugador
+        self.selecting_players = False
+        #Menú principal del juego con submenús.
+
+    #def __init__(self, screen, sound_manager):
         self.screen = screen
         self.sound = sound_manager
         self.state = self.STATE_MAIN
@@ -167,6 +171,7 @@ class Menu:
         self.frame = 0
         self.selected_level = 1
         self.max_levels = 5
+        self.selecting_players = False
 
         # Configuraciones
         self.fullscreen = False
@@ -180,9 +185,10 @@ class Menu:
 
         self.main_buttons = [
             RetroButton(btn_x, start_y, btn_w, btn_h, "PLAY", CYAN),
-            RetroButton(btn_x, start_y + gap, btn_w, btn_h, "LEVELS", GREEN),
-            RetroButton(btn_x, start_y + gap * 2, btn_w, btn_h, "SOUND", MAGENTA),
-            RetroButton(btn_x, start_y + gap * 3, btn_w, btn_h, "SETTINGS", YELLOW),
+            RetroButton(btn_x, start_y + gap, btn_w, btn_h, "JUGADORES", BLUE),
+            RetroButton(btn_x, start_y + gap * 2, btn_w, btn_h, "LEVELS", GREEN),
+            RetroButton(btn_x, start_y + gap * 3, btn_w, btn_h, "SOUND", MAGENTA),
+            RetroButton(btn_x, start_y + gap * 4, btn_w, btn_h, "SETTINGS", YELLOW),
         ]
         self.main_index = 0
         self.main_buttons[0].selected = True
@@ -228,6 +234,8 @@ class Menu:
 
     def handle_event(self, event):
         """Maneja eventos de teclado. Retorna (action, data) o None."""
+        if self.selecting_players:
+            return self._handle_players_select(event)
         if event.type != pygame.KEYDOWN:
             return None
 
@@ -256,15 +264,34 @@ class Menu:
             self.sound.play("menu_confirm")
             if self.main_index == 0:  # PLAY
                 return ("play", self.selected_level)
-            elif self.main_index == 1:  # LEVELS
+            elif self.main_index == 1:  # JUGADORES
+                self.selecting_players = True
+            elif self.main_index == 2:  # LEVELS
                 self.state = self.STATE_LEVELS
                 self._select_level_button(self.level_index)
-            elif self.main_index == 2:  # SOUND
+            elif self.main_index == 3:  # SOUND
                 self.state = self.STATE_SOUND
                 self._select_sound_slider(self.sound_index)
-            elif self.main_index == 3:  # SETTINGS
+            elif self.main_index == 4:  # SETTINGS
                 self.state = self.STATE_SETTINGS
                 self.settings_index = 0
+        return None
+
+    def _handle_players_select(self, event):
+        if event.type != pygame.KEYDOWN:
+            return None
+        if event.key in (pygame.K_LEFT, pygame.K_a, pygame.K_UP, pygame.K_w):
+            self.num_players = 1
+            self.sound.play("menu_select")
+        elif event.key in (pygame.K_RIGHT, pygame.K_d, pygame.K_DOWN, pygame.K_s):
+            self.num_players = 2
+            self.sound.play("menu_select")
+        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            self.selecting_players = False
+            self.sound.play("menu_confirm")
+        elif event.key == pygame.K_ESCAPE:
+            self.selecting_players = False
+            self.sound.play("menu_select")
         return None
 
     def _handle_levels(self, event):
@@ -375,7 +402,9 @@ class Menu:
         self.screen.fill((5, 5, 15))
         self.starfield.draw(self.screen)
 
-        if self.state == self.STATE_MAIN:
+        if self.selecting_players:
+            self._draw_players_select()
+        elif self.state == self.STATE_MAIN:
             self._draw_main()
         elif self.state == self.STATE_LEVELS:
             self._draw_levels()
@@ -383,6 +412,24 @@ class Menu:
             self._draw_sound()
         elif self.state == self.STATE_SETTINGS:
             self._draw_settings()
+
+    def _draw_players_select(self):
+        self._draw_subtitle("JUGADORES")
+        self._draw_back_hint()
+        font = pygame.font.SysFont("monospace", 36, bold=True)
+        opt1_color = (255, 255, 0) if self.num_players == 1 else (120, 120, 120)
+        opt2_color = (255, 255, 0) if self.num_players == 2 else (120, 120, 120)
+        opt1 = font.render("1 JUGADOR", True, opt1_color)
+        opt2 = font.render("2 JUGADORES", True, opt2_color)
+        opt1_rect = opt1.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 30))
+        opt2_rect = opt2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 30))
+        self.screen.blit(opt1, opt1_rect)
+        self.screen.blit(opt2, opt2_rect)
+        # Instrucciones
+        font_ctrl = pygame.font.SysFont("monospace", 18)
+        controls = font_ctrl.render("[←/→/↑/↓] Elegir   [ENTER] Confirmar   [ESC] Volver", True, (80, 80, 80))
+        ctrl_rect = controls.get_rect(center=(WIDTH // 2, HEIGHT - 40))
+        self.screen.blit(controls, ctrl_rect)
 
     def _draw_title(self):
         """Dibuja el título con efecto retro."""

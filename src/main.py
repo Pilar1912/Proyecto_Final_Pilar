@@ -39,7 +39,9 @@ def main():
                 if result:
                     action, data = result
                     if action == "play":
-                        game = Game(screen, sound_manager, start_level=data)
+                        # Pasar número de jugadores
+                        num_players = getattr(menu, "num_players", 1)
+                        game = Game(screen, sound_manager, start_level=data, num_players=num_players)
                         state = "playing"
 
             menu.update()
